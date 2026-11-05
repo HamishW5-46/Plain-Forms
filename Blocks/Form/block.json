@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "plain-forms/form",
+  "version": "1.0.0",
+  "title": "Plain Forms",
+  "category": "widgets",
+  "icon": "email-alt",
+  "description": "Insert a contact or enquiry form.",
+  "textdomain": "plain-forms",
+  "attributes": {
+    "formId": {"type": "number", "default": 0},
+    "showTitle": {"type": "boolean", "default": true},
+    "showDescription": {"type": "boolean", "default": true}
+  },
+  "supports": {"html": false},
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./editor.css",
+  "render": "file:./render.php"
+}

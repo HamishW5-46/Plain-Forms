@@ -1,0 +1,17 @@
+{
+  "name": "plain-forms",
+  "private": true,
+  "description": "Forms, plain and simple. A free, no-subscription WordPress contact and enquiry form builder.",
+  "scripts": {
+    "test:browser": "node tests/browser.cjs",
+    "check": "node --check assets/admin.js && node --check assets/admin-app.js && node --check assets/frontend.js && node --check Blocks/Form/index.js",
+    "build": "node scripts/build.cjs",
+    "test:admin": "node tests/admin-browser.cjs",
+    "package": "npm run build && python3 scripts/package.py"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "playwright": "^1.64.1",
+    "esbuild": "^0.28.2"
+  }
+}

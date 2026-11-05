@@ -1,0 +1,12 @@
+parameters:
+    level: 5
+    phpVersion: 80100
+    paths:
+        - includes
+        - Admin
+        - Rest
+        - plain-forms.php
+        - uninstall.php
+    scanFiles:
+        - vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+        - tests/static-symbols.php

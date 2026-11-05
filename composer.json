@@ -1,0 +1,13 @@
+{
+  "name": "plainforms/plain-forms",
+  "description": "Forms, plain and simple. A free, no-subscription WordPress contact and enquiry form builder.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {"php": ">=8.1"},
+  "require-dev": {"phpstan/phpstan": "^2.3", "php-stubs/wordpress-stubs": "^7.1"},
+  "scripts": {
+    "test": ["@php -d error_reporting=E_ALL tests/run.php", "@php tests/uninstall.php preserve", "@php tests/uninstall.php delete"],
+    "analyse": "phpstan analyse --no-progress"
+  },
+  "config": {"allow-plugins": false, "sort-packages": true}
+}
