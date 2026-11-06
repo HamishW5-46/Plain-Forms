@@ -4,7 +4,7 @@ Tags: contact, forms, enquiries, turnstile, gutenberg
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.12.0
+Stable tag: 0.12.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -290,6 +290,12 @@ Yes.
 Plain Forms supports independently configured HTML templates for team notifications and submitter receipts, plus PHP template overrides from the active theme or child theme.
 
 == Changelog ==
+
+= 0.12.1 =
+
+* Accept valid boolean settings without falling through into text validation.
+* Cover full settings saves with the uninstall toggle both enabled and disabled.
+* Improve mobile Forms list layout and empty-state display.
 
 = 0.12.0 =
 

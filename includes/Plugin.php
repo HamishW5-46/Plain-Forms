@@ -4,7 +4,7 @@ use PlainForms\Admin\Admin;
 use PlainForms\Rest\{AdminController, SubmitController, EditorController};
 
 final class Plugin {
-	public const VERSION = '0.12.0';
+	public const VERSION = '0.12.1';
 	public const VERSION_OPTION = 'plainforms_version';
 
 	public function boot(): void {
