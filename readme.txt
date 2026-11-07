@@ -392,4 +392,4 @@ To rebuild, run npm ci followed by npm run build. The source build uses esbuild 
 entry point assets/src/admin/index.jsx, IIFE output, ES2020 target, JSX factory h and
 fragment Fragment, bundled and minified to assets/admin-app.js. React and WordPress
 components are supplied by WordPress rather than bundled. The development repository
-and release packaging instructions are at https://github.com/HamishW5-46/wp-formkit.
+and release packaging instructions are at https://github.com/HamishW5-46/plain-forms.
