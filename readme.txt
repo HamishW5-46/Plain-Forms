@@ -215,41 +215,9 @@ If "Delete all plugin data on uninstall" has explicitly been enabled for a site,
 
 Multisite uninstall respects each site's own setting.
 
-== Development ==
-
-Plain Forms requires only supported WordPress and PHP versions at runtime.
-
-Composer and npm are development tools only.
-
-PHP development:
-
-`composer install`
-
-`composer test`
-
-`composer analyse`
-
-PHPStan runs at level 5 with PHP 8.1 as the analysis target.
-
-JavaScript development:
-
-`npm ci`
-
-`npm run build`
-
-`npm run check`
-
-The compiled React administration bundle is included with the plugin. Node.js and npm are not required on a production WordPress server.
-
-`npm run test:admin` runs React administration browser checks using real WordPress assets.
-
-The React source is located under `assets/src/admin/` and is compiled by `scripts/build.cjs` into the included administration bundle.
-
-Do not run transactional integration tests against a production WordPress installation.
-
 == Frequently Asked Questions ==
 
-= Is Plain Forms intended to replace Gravity Forms completely? =
+= Is Plain Forms intended to replace premium form plugins? =
 
 No. Plain Forms focuses on ordinary contact and enquiry forms.
 
@@ -265,7 +233,7 @@ Frontend forms use JavaScript for asynchronous submission and enhanced behaviour
 
 Yes, when submission storage is enabled.
 
-Storage is enabled by default and is recommended because it allows enquiries to be recovered if email delivery fails.
+Storage is enabled by default and is recommended because it provides a fallback if email delivery fails.
 
 = Does Plain Forms store visitor IP addresses? =
 
@@ -276,12 +244,6 @@ When enabled, Plain Forms derives a site-keyed hash for source-based rate limiti
 = Does Plain Forms require jQuery? =
 
 No.
-
-= Does Plain Forms require Composer or Node.js in production? =
-
-No.
-
-The production assets are prebuilt.
 
 = Can I customise notification emails? =
 
