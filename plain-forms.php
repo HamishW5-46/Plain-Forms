@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Plain Forms
  * Description: Forms, plain and simple. A free, no-subscription contact and enquiry form builder with stored submissions, notifications and spam protection.
- * Version: 0.12.1
+ * Version: 0.13.0
  * Requires at least: 6.6
  * Requires PHP: 8.1
  * Text Domain: plain-forms

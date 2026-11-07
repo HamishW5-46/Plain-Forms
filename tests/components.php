@@ -46,6 +46,18 @@ check( $turnstile->valid_response( $response, $s ), 'Turnstile valid verificatio
 foreach ( array( array( 'success' => false ), array( 'hostname' => 'evil.org' ), array( 'action' => 'wrong' ), array( 'challenge_ts' => gmdate( 'c', time() - 301 ) ), array( 'challenge_ts' => 'invalid' ) ) as $change ) {
 	check( ! $turnstile->valid_response( array_replace( $response, $change ), $s ), 'Turnstile rejects failure, mismatched origin/action or expired/invalid timestamp' );
 }
+foreach ( array(
+	array( array( 'success' => false, 'error-codes' => array( 'invalid-input-secret' ) ), 'turnstile_secret_invalid' ),
+	array( array( 'success' => false, 'error-codes' => array( 'timeout-or-duplicate' ) ), 'turnstile_token_expired' ),
+	array( array( 'success' => false, 'error-codes' => array( 'internal-error' ) ), 'turnstile_provider_failed' ),
+	array( array( 'success' => false, 'error-codes' => array( array( 'untrusted' ), 'raw-provider-detail' ) ), 'turnstile_token_rejected' ),
+	array( array_replace( $response, array( 'hostname' => 'different.example' ) ), 'turnstile_hostname_mismatch' ),
+	array( array_replace( $response, array( 'action' => 'other' ) ), 'turnstile_action_mismatch' ),
+	array( array_replace( $response, array( 'challenge_ts' => 'invalid' ) ), 'turnstile_timestamp_invalid' ),
+) as list( $provider_result, $expected_code ) ) {
+	check( ! $turnstile->valid_response( $provider_result, $s ) && $expected_code === $turnstile->failure_code(), 'Turnstile rejects with a fixed diagnostic: ' . $expected_code );
+}
+check( $turnstile->valid_response( $response, $s ) && '' === $turnstile->failure_code(), 'Successful Turnstile verification clears the previous diagnostic' );
 $spam = new AntiSpam();
 check( $spam->honeypot( 'filled', true ) && ! $spam->honeypot( '', true ) && ! $spam->honeypot( 'filled', false ), 'Honeypot respects enabled state and empty/populated values' );
 foreach ( array( '=SUM(1,1)', '+x', '-1', '@cmd', " \t=HYPERLINK()", "\tvalue" ) as $formula ) {
@@ -75,3 +87,16 @@ check( str_starts_with( \PlainForms\Admin\CsvExporter::safe( "\u{FEFF}=1+1" ), "
 $repository = new SubmissionRepository();
 check( ! $repository->decode( array( 'data' => '{broken' ) )['data_valid'], 'Malformed submission JSON handled without warning' );
 check( ! $repository->decode( array( 'data' => '{"name":{"nested":"bad"},"_plainforms":"bad"}' ) )['data_valid'], 'Malformed stored field/snapshot types fail safely' );
+
+// Capture only this namespace's logger calls; no PHP log or filesystem writes in unit tests.
+function error_log( string $message ): bool { $GLOBALS['plainforms_test_logs'][] = $message; return true; }
+$previous_debug = $GLOBALS['options'][Settings::OPTION]['debug_logging'];
+$GLOBALS['plainforms_test_logs'] = array();
+$GLOBALS['options'][Settings::OPTION]['debug_logging'] = false;
+( new Logger() )->event( 'turnstile_secret_invalid' );
+check( array() === $GLOBALS['plainforms_test_logs'], 'Turnstile diagnostics stay disabled unless explicitly enabled' );
+$GLOBALS['options'][Settings::OPTION]['debug_logging'] = true;
+( new Logger() )->event( 'turnstile_secret_invalid' );
+( new Logger() )->event( 'untrusted-token-or-provider-detail' );
+check( array( '[Plain Forms] turnstile_secret_invalid' ) === $GLOBALS['plainforms_test_logs'], 'Diagnostic logger allows only fixed codes and rejects arbitrary details' );
+$GLOBALS['options'][Settings::OPTION]['debug_logging'] = $previous_debug;

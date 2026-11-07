@@ -1,10 +1,10 @@
 <?php
 namespace PlainForms;
 use PlainForms\Admin\Admin;
-use PlainForms\Rest\{AdminController, SubmitController, EditorController};
+use PlainForms\Rest\{AdminController, SubmitController, EditorController, TurnstileController};
 
 final class Plugin {
-	public const VERSION = '0.12.1';
+	public const VERSION = '0.13.0';
 	public const VERSION_OPTION = 'plainforms_version';
 
 	public function boot(): void {
@@ -14,6 +14,7 @@ final class Plugin {
 		add_action( 'admin_init', array( new Settings(), 'register' ) );
 		add_action( 'rest_api_init', array( new AdminController(), 'register' ) );
 		add_action( 'rest_api_init', array( new EditorController(), 'register' ) );
+		add_action( 'rest_api_init', array( new TurnstileController(), 'register' ) );
 		$submit = new SubmitController();
 		add_action( 'rest_api_init', array( $submit, 'register' ) );
 		add_action( 'admin_post_nopriv_plainforms_submit', array( $submit, 'fallback' ) );

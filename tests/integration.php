@@ -98,8 +98,23 @@ try {
 		return $pre;
 	}, 10, 3 );
 	verify( 400 === $service->process( $id, $payload, $server )[1], 'Turnstile network failure blocks submission' );
+	$verifier = new Turnstile();
+	verify( ! $verifier->verify( 'test-token', $test_settings ) && 'turnstile_network_failed' === $verifier->failure_code(), 'Turnstile network diagnostics retain no transport exception details' );
+	verify( ! $verifier->verify( '', $test_settings ) && 'turnstile_invalid_token' === $verifier->failure_code(), 'Missing token is rejected with a fixed diagnostic' );
+	$missing_key = $test_settings; $missing_key['turnstile_secret_key'] = '';
+	verify( ! $verifier->verify( 'test-token', $missing_key ) && 'turnstile_not_configured' === $verifier->failure_code(), 'Missing Turnstile credentials fail closed without exposing configuration' );
+	$transport_response = array();
+	$transport_override = static function ( $pre, $args, $url ) use ( &$transport_response ) { return str_contains( $url, 'challenges.cloudflare.com/turnstile/v0/siteverify' ) ? $transport_response : $pre; };
+	add_filter( 'pre_http_request', $transport_override, 20, 3 );
+	try {
+		$transport_response = array( 'response' => array( 'code' => 503 ), 'body' => 'private upstream details' );
+		verify( ! $verifier->verify( 'test-token', $test_settings ) && 'turnstile_http_failed' === $verifier->failure_code(), 'Siteverify HTTP errors fail closed with no upstream details retained' );
+		$transport_response = array( 'response' => array( 'code' => 200 ), 'body' => 'not JSON: private upstream details' );
+		verify( ! $verifier->verify( 'test-token', $test_settings ) && 'turnstile_invalid_response' === $verifier->failure_code(), 'Invalid Siteverify JSON fails closed with no response body retained' );
+	} finally { remove_filter( 'pre_http_request', $transport_override, 20 ); }
 	$mock_verify = true;
 	verify( true === $service->process( $id, $payload, $server )[0]['success'], 'Turnstile verified response permits submission' );
+	verify( $verifier->verify( 'test-token', $test_settings ) && '' === $verifier->failure_code(), 'Verified Siteverify response clears stale failure diagnostics' );
 	$test_settings['turnstile_enabled'] = false;
 	$test_settings['store_user_agent'] = true; $test_settings['store_referer'] = true;
 	$server['HTTP_REFERER'] = 'https://example.org/contact?token=never-retain#fragment';

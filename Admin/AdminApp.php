@@ -8,7 +8,7 @@ final class AdminApp {
 		$settings = ( new Settings() )->get();
 		$has_secret = '' !== $settings['turnstile_secret_key'];
 		unset( $settings['turnstile_secret_key'] );
-		return array( 'values' => $settings, 'hasSecret' => $has_secret );
+		return array( 'values' => $settings, 'hasSecret' => $has_secret, 'publicHostname' => (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 	}
 	public static function defaults(): array {
 		$s = ( new Settings() )->get();

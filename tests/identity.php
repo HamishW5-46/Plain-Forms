@@ -23,6 +23,7 @@ $checks = array(
  'React admin assets stay unqueued on an unrelated request' => ! wp_script_is( 'plain-forms-admin-app', 'enqueued' ) && ! wp_script_is( 'plain-forms-admin', 'enqueued' ) && ! wp_style_is( 'plain-forms-admin', 'enqueued' ),
  'Activation entry uses the new bootstrap' => in_array( 'plain-forms/plain-forms.php', get_option( 'active_plugins', array() ), true ),
  'Administrator capabilities installed' => ! array_diff( Capabilities::all(), array_keys( array_filter( get_role( 'administrator' )->capabilities ) ) ),
+ 'Private verification test route registered' => isset( rest_get_server()->get_routes()['/plain-forms/v1/admin/turnstile-test'] ),
  'Form metadata uses private prefix' => FormRepository::META_KEY === '_plainforms_config',
 );
 foreach ( $checks as $label => $passed ) { if ( ! $passed ) { throw new RuntimeException( $label ); } echo "PASS: $label\n"; }

@@ -66,12 +66,54 @@ try {
 	}
 	$result = editor_request( 'settings', array( 'success_message' => "Thanks.\nWe will be in touch.", 'retention_days' => 90 ) );
 	editor_check( 200 === $result->get_status() && str_contains( $result->get_data()['values']['success_message'], "\n" ), 'Multiline confirmation and numeric settings round trip' );
+	$seed = $settings->get(); $seed['turnstile_secret_key'] = 'stored-verification-test-secret';
+	update_option( Settings::OPTION, $seed, false );
+	$before_test = $settings->get(); $verification_calls = array();
+	$provider = array( 'success' => true, 'hostname' => 'public.example.org', 'action' => 'contact', 'challenge_ts' => gmdate( 'c' ) );
+	$mock_turnstile = static function ( $pre, $args, $url ) use ( &$provider, &$verification_calls ) {
+		if ( 'https://challenges.cloudflare.com/turnstile/v0/siteverify' !== $url ) { return $pre; }
+		$verification_calls[] = $args['body'];
+		return array( 'response' => array( 'code' => 200 ), 'body' => wp_json_encode( $provider ) );
+	};
+	add_filter( 'pre_http_request', $mock_turnstile, 20, 3 );
+	$test_payload = array( 'settings' => array( 'turnstile_site_key' => 'unsaved-test-site-key', 'turnstile_secret_key' => '', 'turnstile_hostname' => 'public.example.org', 'turnstile_action' => 'contact', 'clear_turnstile_secret' => false ), 'token' => 'test-widget-token' );
+	try {
+		$result = editor_request( 'turnstile-test', $test_payload );
+		editor_check( 200 === $result->get_status() && $result->get_data()['success'] && 'no-store, private' === $result->get_headers()['Cache-Control'], 'Authenticated configuration test verifies a real-shaped Siteverify response without caching' );
+		editor_check( end( $verification_calls )['secret'] === 'stored-verification-test-secret' && $before_test === $settings->get(), 'Blank test secret uses the saved key without saving the unsaved configuration' );
+		editor_check( ! str_contains( wp_json_encode( $result->get_data() ), 'stored-verification-test-secret' ) && ! str_contains( wp_json_encode( $result->get_data() ), 'test-widget-token' ), 'Configuration test response exposes neither the saved secret nor the token' );
+		$entered = $test_payload; $entered['settings']['turnstile_secret_key'] = 'unsaved-verification-test-secret';
+		$result = editor_request( 'turnstile-test', $entered );
+		editor_check( 200 === $result->get_status() && end( $verification_calls )['secret'] === 'unsaved-verification-test-secret' && $before_test === $settings->get(), 'Entered test secret overrides the saved key for verification only' );
+		$provider['hostname'] = 'another.example.org';
+		$result = editor_request( 'turnstile-test', $test_payload );
+		editor_check( 400 === $result->get_status() && 'turnstile_hostname_mismatch' === $result->get_data()['code'], 'Configuration test reports an exact hostname mismatch' );
+		$provider['hostname'] = 'public.example.org'; $provider['action'] = 'another_action';
+		$result = editor_request( 'turnstile-test', $test_payload );
+		editor_check( 400 === $result->get_status() && 'turnstile_action_mismatch' === $result->get_data()['code'], 'Configuration test reports an action mismatch' );
+		$provider = array( 'success' => false, 'error-codes' => array( 'invalid-input-secret' ) );
+		$result = editor_request( 'turnstile-test', $test_payload );
+		editor_check( 400 === $result->get_status() && 'turnstile_secret_invalid' === $result->get_data()['code'], 'Configuration test explains rejected credentials without exposing them' );
+		$calls = count( $verification_calls ); $bad = $test_payload; $bad['token'] = '';
+		editor_check( 400 === editor_request( 'turnstile-test', $bad )->get_status() && $calls === count( $verification_calls ), 'Configuration test requires a nonempty challenge token' );
+		$bad = $test_payload; $bad['settings']['turnstile_hostname'] = 'https://example.org/path';
+		editor_check( 400 === editor_request( 'turnstile-test', $bad )->get_status() && $calls === count( $verification_calls ), 'Malformed test settings are rejected before contacting Cloudflare' );
+		$bad = $test_payload; $bad['settings']['delete_on_uninstall'] = true;
+		editor_check( 400 === editor_request( 'turnstile-test', $bad )->get_status() && $before_test === $settings->get(), 'Configuration test rejects unrelated settings and never updates options' );
+		$bad = $test_payload; $bad['settings']['clear_turnstile_secret'] = true;
+		$result = editor_request( 'turnstile-test', $bad );
+		editor_check( 'turnstile_not_configured' === $result->get_data()['code'] && $calls === count( $verification_calls ) && $before_test === $settings->get(), 'Pending key removal is respected by the test without deleting the saved secret' );
+		$bad = $test_payload; $bad['token'] = str_repeat( 'x', 10001 );
+		editor_check( 413 === editor_request( 'turnstile-test', $bad )->get_status(), 'Oversized configuration test requests are bounded' );
+	} finally { remove_filter( 'pre_http_request', $mock_turnstile, 20 ); }
 	$deny = static function ( array $caps ): array { $caps[Capabilities::EDIT] = false; $caps[Capabilities::SETTINGS] = false; return $caps; };
 	add_filter( 'user_has_cap', $deny );
 	editor_check( 403 === editor_request( 'forms', array( 'title' => 'Denied', 'config' => $schema ) )->get_status(), 'Form editing requires its custom capability even for an otherwise privileged user' );
 	editor_check( 403 === editor_request( 'settings', array( 'debug_logging' => true ) )->get_status(), 'Settings saving requires its custom capability' );
+	editor_check( 403 === editor_request( 'turnstile-test', $test_payload )->get_status(), 'Configuration test requires the settings capability' );
 	remove_filter( 'user_has_cap', $deny );
 	wp_set_current_user( 0 );
 	editor_check( 401 === editor_request( 'forms', array( 'title' => 'Denied', 'config' => $schema ) )->get_status() && 401 === editor_request( 'settings', array() )->get_status(), 'Anonymous users cannot access either private save endpoint' );
+	editor_check( 401 === editor_request( 'turnstile-test', $test_payload )->get_status(), 'Anonymous visitors cannot use the configuration test' );
 	echo $checks, ' editor API checks passed. All writes will roll back.', PHP_EOL;
 } finally { $wpdb->query( 'ROLLBACK' ); foreach ( $ids as $id ) { clean_post_cache( $id ); } }

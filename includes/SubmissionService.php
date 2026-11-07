@@ -18,8 +18,9 @@ final class SubmissionService {
 		if ( $s['hash_ip'] && ( ! $ip || ! ( new RateLimiter() )->allow( $ip, $id, (int) $s['rate_limit_count'], (int) $s['rate_limit_window'] ) ) ) { return $this->error( 'rate_limited', 'Please wait a few minutes before trying again.', 429 ); }
 		if ( $c['turnstile'] ?? $s['turnstile_enabled'] ) {
 			$token = $request['cf-turnstile-response'] ?? '';
-			if ( ! is_string( $token ) || ! ( new Turnstile() )->verify( $token, $s ) ) {
-				( new Logger() )->event( 'turnstile_failed' );
+			$turnstile = new Turnstile();
+			if ( ! is_string( $token ) || ! $turnstile->verify( $token, $s ) ) {
+				( new Logger() )->event( is_string( $token ) ? $turnstile->failure_code() : 'turnstile_invalid_token' );
 				return $this->error( 'verification_failed', 'Please complete the verification and try again.', 400 );
 			}
 		}

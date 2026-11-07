@@ -153,6 +153,13 @@ Plain Forms supports several complementary controls:
 
 Turnstile verification occurs server-side.
 
+Under **Settings → Spam protection**, use **Test Turnstile configuration** to verify
+entered keys, the expected hostname and action with a real challenge before saving.
+A blank secret uses the saved secret without returning it to the browser. The panel
+also flags hostname differences immediately, including `www` prefixes. Tests run on
+the dashboard hostname and neither save settings nor create enquiries. Changes to
+verification settings clear the previous result.
+
 The stored Turnstile secret is never exposed to frontend JavaScript, React bootstrap data or REST responses.
 
 ## Stored Submissions

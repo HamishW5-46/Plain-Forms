@@ -257,3 +257,8 @@
 .plainforms-email-preview-modal { width: min(860px, 92vw); max-width: 92vw; }
 .plainforms-email-preview-modal iframe { width: 100%; height: min(65vh, 720px); min-height: 280px; border: 1px solid #dfe3ea; background: #fff; margin-top: 18px; }
 .plainforms-preview-loading { display: flex; gap: 12px; align-items: center; padding: 24px; }
+
+/* A live verification widget stays within the settings card on small screens. */
+.plainforms-turnstile-test { border-top: 1px solid #dcdcde; margin-top: 24px; padding-top: 20px; }
+.plainforms-turnstile-test-widget { margin-top: 16px; max-width: 100%; overflow-x: auto; }
+.plainforms-turnstile-test > .components-notice, .plainforms-turnstile-test [role=status] { margin-top: 12px; }

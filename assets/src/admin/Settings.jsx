@@ -22,6 +22,7 @@ import {
     EmailsControl,
 } from './common';
 import { useSaveGuard } from './state';
+import TurnstileTest from './TurnstileTest';
 const sections = [
     {
         name: 'general',
@@ -436,6 +437,7 @@ export default function Settings({ data, links }) {
                                         'Optional. Use letters, numbers, underscores or hyphens.',
                                     )}
                                 </div>
+                                <TurnstileTest values={values} hasSecret={hasSecret} publicHostname={data.publicHostname} />
                                 {values.turnstile_enabled && !ready && (
                                     <Notice
                                         status="warning"

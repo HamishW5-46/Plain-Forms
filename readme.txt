@@ -4,7 +4,7 @@ Tags: contact, forms, enquiries, turnstile, gutenberg
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.12.1
+Stable tag: 0.13.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -291,6 +291,19 @@ Plain Forms supports independently configured HTML templates for team notificati
 
 == Changelog ==
 
+= 0.13.0 =
+
+* Added a live Turnstile configuration test in Settings > Spam protection using entered values or the saved secret.
+* Added immediate expected-hostname warnings, including www differences, and specific authenticated verification feedback.
+* Configuration tests never save settings or submit enquiries; editing a verification field invalidates the result.
+
+
+= 0.12.2 =
+
+* Clear stale verification errors when a fresh Turnstile challenge succeeds, preserving answers and unrelated field errors.
+* Add optional fixed diagnostic codes for server-side Turnstile failures without logging secrets, tokens or provider details.
+
+
 = 0.12.1 =
 
 * Accept valid boolean settings without falling through into text validation.
@@ -350,6 +363,50 @@ Plain Forms supports independently configured HTML templates for team notificati
 = 0.1.0 =
 
 * Initial storage, settings, capability and lifecycle foundations.
+
+== Turnstile configuration test ==
+
+In Settings > Spam protection, enter the site key, secret, optional expected hostname
+and action, then select Test Turnstile configuration. Complete the test challenge; the
+server will verify its token with the same checks used by public forms and report any
+credential, hostname, action or connection problem. Save settings separately after testing.
+Leaving the secret blank tests the existing saved secret without revealing it in the browser.
+Changing a verification setting clears the previous test result.
+
+The test runs on the dashboard hostname shown in the panel. If your administration and
+public forms use different hostnames, open the dashboard on the public hostname for an
+exact hostname check. The public website hostname is shown as a guide, with immediate
+warnings when the configured expected hostname differs. Alternative form domains may be
+intentional, so the warning does not silently change settings or disable validation.
+
+Running the test explicitly loads Cloudflare's hosted script even if default Turnstile
+protection is disabled. Only authorised settings administrators can use the endpoint.
+The test does not save configuration, create a submission or send notification emails.
+
+== Turnstile troubleshooting ==
+
+A green Turnstile widget confirms the browser challenge. The server must still validate
+its token using Cloudflare Siteverify. Tokens expire after five minutes and can be used
+only once. A failed submission refreshes the challenge; submit again after it succeeds.
+
+If every attempt fails, confirm that the site key and secret key belong to the same
+Cloudflare widget and that the widget permits the public site's hostname. Configured
+expected hostname/action values must match the rendered form and Siteverify response.
+After changing these settings, purge cached form pages so they use the current site key
+and action. Keep server-side hostname/action validation enabled when configured.
+
+To diagnose a server rejection, temporarily enable operational debug logging under
+Plain Forms > Settings > Advanced, reproduce once and inspect the site's PHP error log
+(or WordPress debug log when configured). Disable logging again after troubleshooting.
+Only fixed event codes are logged, never keys, tokens, form values or provider messages:
+
+* turnstile_secret_invalid: Cloudflare rejected the configured secret.
+* turnstile_not_configured: required keys are missing.
+* turnstile_token_expired: token expired or was already consumed.
+* turnstile_token_rejected / turnstile_invalid_token: token rejected, missing or malformed.
+* turnstile_hostname_mismatch / turnstile_action_mismatch: expected configuration did not match.
+* turnstile_timestamp_invalid: challenge timestamp invalid, too old or ahead of the server clock.
+* turnstile_network_failed / turnstile_http_failed / turnstile_provider_failed / turnstile_invalid_response: server/API connection or response problem.
 
 == External services ==
 

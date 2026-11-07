@@ -7,7 +7,7 @@
         const button = form.querySelector('.plainforms-submit');
         const summary = form.querySelector('.plainforms-error-summary');
         const status = form.querySelector('.plainforms-status');
-        const state = {form, busy:false, token:'', widget:null, ready:false};
+        const state = {form, busy:false, token:'', widget:null, ready:false, verificationError:false, verificationUnavailable:false};
         const needsToken = form.dataset.turnstile === '1';
         states.push(state);
         function validity() {
@@ -25,12 +25,12 @@
         }
         state.update = () => { button.disabled = state.busy || !validity() || (needsToken && !state.token); };
         function clearErrors() {
-            summary.hidden=true; summary.replaceChildren();
+            summary.hidden=true; summary.replaceChildren(); state.verificationError=false;
             form.querySelectorAll('[aria-invalid]').forEach(n=>n.removeAttribute('aria-invalid'));
             form.querySelectorAll('.plainforms-error').forEach(n=>{n.textContent='';});
         }
         function errors(result) {
-            clearErrors(); const heading = document.createElement('p'); heading.textContent=result.message || 'Unable to submit. Please try again.'; summary.append(heading);
+            clearErrors(); state.verificationError=['verification_failed','verification_required'].includes(result.code); const heading = document.createElement('p'); heading.textContent=result.message || 'Unable to submit. Please try again.'; summary.append(heading);
             Object.entries(result.fields || {}).forEach(([id,message]) => {
                 const group = [...form.querySelectorAll('[data-field]')].find(n=>n.dataset.field===id);
                 if (!group) return;
@@ -54,7 +54,7 @@
             event.preventDefault();
             if (state.busy) return;
             if (!validity()) { form.reportValidity(); return; }
-            if (needsToken && !state.token) { errors({message:'Please complete the verification.'}); return; }
+            if (needsToken && !state.token) { errors({code:'verification_required',message:'Please complete the verification.'}); return; }
             state.busy=true; state.update(); clearErrors(); status.textContent='Sending your enquiry…'; form.setAttribute('aria-busy','true');
             const data=new FormData(form); if(needsToken) data.set('cf-turnstile-response',state.token);
             try {
@@ -75,7 +75,7 @@
             const target=form.querySelector('.plainforms-turnstile');
             if (!target.dataset.sitekey) return;
             try {
-                state.widget=window.turnstile.render(target,{sitekey:target.dataset.sitekey,action:target.dataset.action || undefined,callback:token=>{state.token=token;state.update();},'expired-callback':()=>{state.token='';state.update();},'error-callback':()=>{state.token='';state.update();status.textContent='Verification unavailable. Please reload the page and try again.';}});
+                state.widget=window.turnstile.render(target,{sitekey:target.dataset.sitekey,action:target.dataset.action || undefined,callback:token=>{state.token=token;if(state.verificationError){clearErrors();status.textContent='Verification refreshed. Please send your enquiry again.';}else if(state.verificationUnavailable){status.textContent='';}state.verificationUnavailable=false;state.update();},'expired-callback':()=>{state.token='';state.update();},'error-callback':()=>{state.token='';state.verificationUnavailable=true;state.update();status.textContent='Verification unavailable. Please reload the page and try again.';}});
             } catch (_) { status.textContent='Verification unavailable. Please reload the page and try again.'; }
         };
         state.renderChallenge();

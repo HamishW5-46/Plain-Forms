@@ -85,6 +85,7 @@ function fixture(mode) {
             ),
             'Stored Turnstile secret absent from all React bootstrap data',
         );
+        let turnstileTestFailure = false;
         let mode = 'builder',
             failSave = false,
             requests = [],
@@ -124,6 +125,11 @@ function fixture(mode) {
                             data: { status: 503 },
                         },
                     });
+                if (url.pathname.endsWith('/turnstile-test')) {
+                    return route.fulfill({ status: turnstileTestFailure ? 400 : 200, headers, json: turnstileTestFailure
+                        ? { success: false, code: 'turnstile_secret_invalid', message: 'Cloudflare rejected the secret key. Copy the secret belonging to this site key.' }
+                        : { success: true, code: 'verified', message: 'Turnstile verified successfully with these settings. Save settings to apply any changes.' } });
+                }
                 if (url.pathname.endsWith('/email-preview')) {
                     return route.fulfill({
                         headers,
@@ -728,6 +734,53 @@ function fixture(mode) {
             'Settings remain usable on mobile',
         );
         await page.setViewportSize({ width: 1440, height: 1050 });
+        await page.getByRole('button', { name: 'Spam protection', exact: true }).click();
+        const testPanel = page.locator('.plainforms-turnstile-test');
+        await page.evaluate(() => {
+            window.removedTestWidgets = 0;
+            window.turnstile = {
+                render: (target, options) => {
+                    window.adminChallengeOptions = options;
+                    window.adminChallengeTarget = target;
+                    target.textContent = 'Cloudflare test challenge';
+                    return 'admin-test-widget';
+                },
+                remove: () => { window.removedTestWidgets++; window.adminChallengeTarget?.replaceChildren(); },
+            };
+        });
+        await page.getByLabel('Site key', { exact: true }).fill('unsaved-browser-site-key');
+        await page.getByLabel('Secret key', { exact: true }).fill('unsaved-browser-secret');
+        await page.getByLabel('Expected hostname', { exact: true }).fill('not-this-website.example');
+        check(await testPanel.getByText(/differs from the public website hostname/).isVisible(), 'Hostname mismatch is flagged immediately, including a changed www prefix');
+        await page.getByLabel('Expected hostname', { exact: true }).fill('');
+        await page.getByLabel('Expected action', { exact: true }).fill('invalid action');
+        check(await testPanel.getByText('Expected action must use up to 32 letters, numbers, underscores or hyphens.', { exact: true }).isVisible() && await testPanel.getByRole('button').first().isDisabled(), 'Invalid action format is flagged before running a challenge');
+        await page.getByLabel('Expected action', { exact: true }).fill('contact');
+        const savesBeforeTest = requests.filter(r => r.path.endsWith('/settings')).length;
+        const testButton = testPanel.getByRole('button').first();
+        await testButton.click();
+        await testPanel.getByText('Complete the test challenge to verify these settings.', { exact: true }).waitFor();
+        check(await page.evaluate(() => window.adminChallengeOptions.sitekey === 'unsaved-browser-site-key' && window.adminChallengeOptions.action === 'contact'), 'Test challenge uses the entered site key and expected action');
+        await page.evaluate(() => { window.adminChallengeOptions.callback('browser-test-token'); });
+        await testPanel.getByText('Turnstile verified successfully with these settings. Save settings to apply any changes.', { exact: true }).waitFor();
+        const testRequest = requests.at(-1);
+        check(testRequest.path.endsWith('/turnstile-test') && testRequest.data.token === 'browser-test-token' && testRequest.data.settings.turnstile_secret_key === 'unsaved-browser-secret' && testRequest.nonce === 'test-nonce', 'Test uses the authenticated endpoint with the entered secret and challenge token');
+        check(requests.filter(r => r.path.endsWith('/settings')).length === savesBeforeTest, 'Successful configuration test does not save settings');
+        await page.getByLabel('Expected action', { exact: true }).fill('contact_updated');
+        check(await testPanel.getByText('Turnstile verified successfully with these settings. Save settings to apply any changes.', { exact: true }).count() === 0 && await page.evaluate(() => window.removedTestWidgets > 0), 'Editing verification settings invalidates the result and removes its widget');
+        turnstileTestFailure = true;
+        await testButton.click();
+        await testPanel.getByText('Complete the test challenge to verify these settings.', { exact: true }).waitFor();
+        await page.evaluate(() => { window.adminChallengeOptions.callback('another-browser-test-token'); });
+        await testPanel.getByText('Cloudflare rejected the secret key. Copy the secret belonging to this site key.', { exact: true }).waitFor();
+        check(await page.getByLabel('Secret key', { exact: true }).inputValue() === 'unsaved-browser-secret', 'Failed test explains rejected credentials and preserves unsaved edits');
+        const turnstileAxe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+        check(!turnstileAxe.violations.length, 'Turnstile test controls and status have no automatic WCAG violations: ' + JSON.stringify(turnstileAxe.violations));
+        await page.setViewportSize({ width: 390, height: 844 });
+        check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Turnstile test fits the mobile settings card');
+        await page.getByRole('button', { name: 'Save settings', exact: true }).first().click();
+        await page.locator('.plainforms-feedback').getByText('Settings saved. Your forms will use these defaults unless they have their own overrides.', { exact: true }).waitFor();
+        await page.setViewportSize({ width: 1440, height: 1050 });
         mode = 'dashboard';
         await page.goto('http://plain-forms.test/');
         await page
@@ -770,8 +823,8 @@ function fixture(mode) {
             'No React/runtime exceptions: ' + JSON.stringify(exceptions),
         );
         check(
-            expectedHttpErrors === 2,
-            'Only the two deliberately simulated HTTP failures were reported by Chromium',
+            expectedHttpErrors === 3,
+            'Only the three deliberately simulated HTTP failures were reported by Chromium',
         );
         check(
             !badConsole.length,
