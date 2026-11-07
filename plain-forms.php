@@ -1,13 +1,16 @@
 <?php
 /**
  * Plugin Name: Plain Forms
+ * Plugin URI: https://github.com/HamishW5-46/Plain-Forms
  * Description: Forms, plain and simple. A free, no-subscription contact and enquiry form builder with stored submissions, notifications and spam protection.
  * Version: 0.13.0
  * Requires at least: 6.6
  * Requires PHP: 8.1
+ * Author: Hamish Wright
  * Text Domain: plain-forms
  * Domain Path: /languages
- * License: GPL-2.0-or-later
+ * License: GPL-3.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  */
 
 namespace PlainForms;
